@@ -1,0 +1,1 @@
+Copy from [STAM](https://github.com/Alibaba-MIIL/STAM)
