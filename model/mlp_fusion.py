@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 class MLPFusion(nn.Module):
-  def __init__(self, num_layers, input_dim, mlp_dim, output_dim):
+  def __init__(self, input_dim, output_dim):
     super(MLPFusion, self).__init__()
     self.fc = nn.Linear(input_dim, output_dim)
 

@@ -7,8 +7,8 @@ import torch
 import torchvision.transforms as T
 from PIL import Image
 
-from augment import temporal_aug, tsn_sample
-from mmsimilarity.experts.vggish.vggish_input import wavfile_to_examples
+from .augment import temporal_aug, tsn_sample
+#from mmsimilarity.experts.vggish.vggish_input import wavfile_to_examples
 
 
 def video_loader(frames_path, max_length, training, video_transform, transform_cnt):
