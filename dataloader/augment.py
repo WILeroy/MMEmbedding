@@ -8,7 +8,7 @@ from PIL import Image
 
 
 class RandomStack(torch.nn.Module):
-    """"""
+    """ Copy and stack k times along the x/y direction of the frames. """
     
     def __init__(self, low=2, up=3):
         super().__init__()
@@ -26,7 +26,7 @@ class RandomStack(torch.nn.Module):
 
 
 class RandomBorder(torch.nn.Module):
-    """"""
+    """ Add borders of random style to the top & bottom or left & right of the frames. """
     
     def __init__(self, styles=['single', 'image', 'blur_image'],
                        low=0.2, up=0.5, border_img_dir=None):
@@ -97,7 +97,7 @@ class RandomBorder(torch.nn.Module):
 
 
 class RandomVideoAug():
-    """"""
+    """ A combination of multiple video augmentation methods. (For Self-Supervised) """
     
     def __init__(self, config):
         self.colorT = T.RandomChoice([
@@ -147,7 +147,7 @@ class RandomVideoAug():
 
 
 class VideoAug():
-    """"""
+    """ Regular video augmentation methods. (For Supervised) """
     
     def __init__(self):
         self.colorT = T.RandomChoice([
@@ -200,7 +200,7 @@ def tsn_sample(num_tokens, num_samples, training):
 
 
 def temporal_aug(total_num, max_length):
-    """ temporal augmentation by shift window """
+    """ temporal augmentation by shift window. """
 
     num_samples = min(total_num, max_length)
     
@@ -209,17 +209,4 @@ def temporal_aug(total_num, max_length):
         return tsn_sample(int(total_num * 0.75), num_samples, True) + start
     else:
         return tsn_sample(total_num, num_samples, True)
-
-
-def text_aug(text, word_drop_rate=0.3, min_drop=1):
-    words = text.split()
-    if len(words) == 0:
-        return ''
-
-    num_drop = max(int(len(words)*word_drop_rate), min_drop)
-    indexes = [i for i in range(len(words))]
-    idx_sampled = random.sample(indexes, len(words)-num_drop)
-    idx_sampled.sort()
-    words = [words[idx] for idx in idx_sampled]
-    return ' '.join(words)
     
