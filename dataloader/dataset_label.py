@@ -62,9 +62,8 @@ class TextDatasetBase(BaseDataset):
 
     def logging(self, logger):
         super().logging(logger)
-        logger.info('model id: {}'.format(self.model_id))
-        logger.info('max length: {}'.format(self.max_length))
-        logger.info('training: {}'.format(self.training))
+        logger.info('model id: {}'.format(self.tokenizer_id))
+        logger.info('max length: {}'.format(self.max_num_tokens))
         logger.info('drop rate: {}'.format(self.drop_rate))
 
 

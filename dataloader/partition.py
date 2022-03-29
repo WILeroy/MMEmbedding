@@ -17,6 +17,9 @@ class Partition(object):
         item = self.data[data_idx]
         
         return item
+
+    def logging(self, logger):
+        logger.info('Partition size: {}'.format(self.__len__()))
         
 
 class DataPartitioner(object):
