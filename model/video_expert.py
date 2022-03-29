@@ -1,3 +1,5 @@
+import collections
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,9 +45,17 @@ class VideoExpert(nn.Module):
         frame_embs = frame_embs.permute(1, 0, 2)
         frame_embs_norm = F.normalize(frame_embs, p=2, dim=2)
 
-        outputs = {}
+        outputs = collections.OrderedDict()
         outputs['pooled_feature'] = cls_emb_norm
         outputs['token_features'] = frame_embs_norm
         outputs['attention_mask'] = mask
 
         return outputs
+
+    def logging(self, logger):
+        logger.info('VideoExpert num_classes: {}'.format(self.num_classes))
+        logger.info('VideoExpert num_frames: {}'.format(self.num_frames))
+        logger.info('VideoExpert frame_size: {}'.format(self.frame_size))
+        logger.info('VideoExpert pretrained: {}'.format(self.pretrain))
+        logger.info('VideoExpert checkpoint_path: {}'.format(self.checkpoint_path))
+        

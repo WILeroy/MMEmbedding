@@ -1,5 +1,4 @@
 import glob
-import os
 import random
 
 import numpy as np
@@ -8,17 +7,16 @@ import torchvision.transforms as T
 from PIL import Image
 
 from .augment import temporal_aug, tsn_sample
-#from mmsimilarity.experts.vggish.vggish_input import wavfile_to_examples
 
 
-def video_loader(frames_path, max_length, training, video_transform, transform_cnt):
+def video_loader(frames_path, max_length, training, video_transform, transform_cnt=1):
     """
     args:
         frames_path: str, frames dir
         max_length: int, max num of sampled frames
         training: bool
         video_transform: 
-        transform_cnt:
+        transform_cnt: int, default 1, >= 1 if self-supervised 
   
     returns:
         videos: tensor, [transform_cnt, max_length, 3, 224, 224]
@@ -68,20 +66,20 @@ def video_loader(frames_path, max_length, training, video_transform, transform_c
     return videos, masks
 
 
-def audio_loader(melfeat_path, max_length, training, transform_cnt, drop_rate):
+def audio_loader(melfeat_path, max_length, training, drop_rate=0, transform_cnt=1):
     """
     args:
-        melfeat_path: str, frames dir
-        max_length: int, max num of sampled frames
+        melfeat_path: str, path to audio mel-feature
+        max_length: int, max num of sampled feature tokens
         training: bool
-        aug_cnt:
-        drop_rate:
+        drop_rate: float, default 0, rate to use empty audio
+        transform_cnt: int, default 1, >= 1 if self-supervised 
   
     returns:
-        data: tensor, [aug_cnt, max_length, 1, 96, 64]
-        mask: tensor, [aug_cnt, max_length, ], 0-padding
+        data: tensor, [transform_cnt, max_length, 1, 96, 64]
+        mask: tensor, [transform_cnt, max_length, ], 0-padding
     """
-    if melfeat_path == "NaN":
+    if melfeat_path == 'empty':
         return (torch.zeros((transform_cnt, max_length, 1, 96, 64), dtype=torch.float32), 
                 torch.zeros((transform_cnt, max_length), dtype=torch.float32))
 
@@ -119,71 +117,20 @@ def audio_loader(melfeat_path, max_length, training, transform_cnt, drop_rate):
     return audios, masks
 
 
-def audio_loader_wav(audio_path, max_length, training, transform_cnt, drop_rate):
+def text_loader(caption, tokenizer, max_length, training, drop_rate=0, transform_cnt=1):
     """
     args:
-        melfeat_path: str, 
-        max_length: int, max num of sampled frames
+        caption: str
+        tokenizer: str, transformers.AutoTokenizer
+        max_length: int, max num of tokens
         training: bool
-        aug_cnt:
-        drop_rate:
-  
+        drop_rate: float, default 0, rate to use empty caption
+        transform_cnt: int, default 1, >= 1 if self-supervised 
+
     returns:
-        data: tensor, [aug_cnt, max_length, 1, 96, 64]
-        mask: tensor, [aug_cnt, max_length, ], 0-padding
+        tokens['input_ids']: tensor, [transform_cnt, max_length]
+        tokens['attention_mask']: tensor, [transform_cnt, max_length], 0-padding
     """
-    if audio_path[-5:] == "empty":
-        return (torch.zeros((transform_cnt, max_length, 1, 96, 64), dtype=torch.float32), 
-                torch.zeros((transform_cnt, max_length), dtype=torch.float32))
-
-    vid = os.path.basename(audio_path)[:-4]
-    mel_path = f'../../data/shopee-video/melfeat/{vid}.npy'
-
-    if os.path.exists(mel_path):
-        melfeat = torch.tensor(np.load(mel_path, allow_pickle=True))
-        print('reload', mel_path)
-    else:
-        try:
-            melfeat = wavfile_to_examples(audio_path)
-            np.save(mel_path, melfeat.detach().numpy(), allow_pickle=True)
-        except:
-            return (torch.zeros((transform_cnt, max_length, 1, 96, 64), dtype=torch.float32), 
-                    torch.zeros((transform_cnt, max_length), dtype=torch.float32))
-
-    num_mel = melfeat.size()[0]
-  
-    audios = []
-    if training:
-        for i in range(transform_cnt):
-            indexes_sampled = temporal_aug(num_mel, max_length)
-            audios.append(melfeat[indexes_sampled])
-    else:
-        indexes_sampled = tsn_sample(num_mel, min(num_mel, max_length), False)
-        audios.append(melfeat[indexes_sampled])
-
-    masks = []
-    for i in range(len(audios)):
-        if random.random() < drop_rate:
-            audios[i] = torch.zeros((max_length, 1, 96, 64), dtype=torch.float32)
-            masks.append(torch.zeros((max_length, ), dtype=torch.long))
-            continue
-    
-        #audios[i] = torch.unsqueeze(audios[i], dim=1)
-        num_sampled = audios[i].size()[0]
-        pad_size = (max_length-num_sampled, 1, 96, 64)
-        if num_sampled < max_length:
-            audios[i] = torch.cat([audios[i], torch.zeros(pad_size, dtype=torch.float32)], dim=0)
-        mask_pad = torch.zeros((max_length, ), dtype=torch.long)
-        mask_pad[:num_sampled] = 1
-        masks.append(mask_pad)
-  
-    audios = torch.stack(audios)
-    masks = torch.stack(masks)
-
-    return audios, masks
-
-
-def text_loader(caption, tokenizer, max_length, training, transform_cnt, drop_rate):
     if training:
         if caption == '':
             text_batch = ['' for _ in range(transform_cnt)]
@@ -194,8 +141,6 @@ def text_loader(caption, tokenizer, max_length, training, transform_cnt, drop_ra
                     text_batch.append('')
                 else:
                     text_batch.append(caption)
-                #else:
-                #    text_batch.append(text_aug(caption))
     else:
         text_batch = [caption]
 

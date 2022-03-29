@@ -1,38 +1,20 @@
 import json
 import random
+
 import torch
-from torch.utils.data.dataset import Dataset
 from transformers import AutoTokenizer
 
-import loader
-from augment import VideoAug
+from . import loader
+from .augment import VideoAug
+from .dataset_base import BaseDataset
 
 
-class BaseDataset(Dataset):
-    """Base Dataset"""
+class VideoDatasetBase(BaseDataset):
+    """Based Video Dataset, use video_id to load frames and masks."""
 
-    def __init__(self, metafile):
-        super().__init__()
-        self.metafile = metafile        
-        self.meta, self.indexes = self.parse_metafile(metafile)
-
-    def parse_metafile(self, metafile):
-        with open(metafile) as f:
-            meta = json.load(f)
-        return meta, list(meta.keys())
-
-    def logging(self, logger):
-        logger.info('metafile: {}'.format(self.metafile))
-        logger.info('size: {}'.format(len(self.indexes)))
-
-
-class VideoDataset(BaseDataset):
-    """Video Dataset"""
-
-    def __init__(self, metafile, max_length, training):
-        super().__init__(metafile)
-        self.max_length = max_length
-        self.training = training
+    def __init__(self, meta, max_num_frames, **kwargs):
+        super().__init__(meta, **kwargs)
+        self.max_num_frames = max_num_frames
         self.video_transform = VideoAug()
 
     def __getitem__(self, index):
@@ -41,31 +23,28 @@ class VideoDataset(BaseDataset):
             index = self.indexes[index]
     
         video_info = self.meta[index]
-        videos, masks = loader.video_loader(video_info['frames'], 
-                                            self.max_length, 
-                                            self.training, 
-                                            self.video_transform, 
-                                            1)
+        frames, masks = loader.video_loader(frames_path=video_info['frames'], 
+                                            max_length=self.max_num_frames, 
+                                            training=True, 
+                                            video_transform=self.video_transform)
         
-        if self.training:
-            return videos, masks
-        return videos, masks, index
+        return frames, masks
 
     def logging(self, logger):
         super().logging(logger)
-        logger.info('max length: {}'.format(self.max_length))
-        logger.info('training: {}'.format(self.training))
+        logger.info('VideoDatasetBase max_num_frames: {}'.format(self.max_num_frames))
 
 
-class TextDataset(BaseDataset):
-    def __init__(self, meta_file, model_id, max_length, training, drop_rate):
-        super().__init__(meta_file)
+class TextDatasetBase(BaseDataset):
+    """Based Text Dataset, use video_id to load toekn_ids and masks."""
 
-        self.max_length = max_length
-        self.training = training
+    def __init__(self, meta, tokenizer_id, max_num_tokens, drop_rate, **kwargs):
+        super().__init__(meta, **kwargs)
+
+        self.tokenizer_id = tokenizer_id
+        self.max_num_tokens = max_num_tokens
         self.drop_rate = drop_rate
-        self.model_id = model_id
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
 
     def __getitem__(self, index):
         assert isinstance(index, (int, str))
@@ -73,16 +52,13 @@ class TextDataset(BaseDataset):
             index = self.indexes[index]
     
         text_info = self.meta[index]
-        tokens, masks = loader.text_loader(text_info['caption'], 
-                                           self.tokenizer, 
-                                           self.max_length, 
-                                           self.training, 
-                                           1, 
-                                           self.drop_rate)
+        tokens, masks = loader.text_loader(caption=text_info['caption'], 
+                                           tokenizer=self.tokenizer, 
+                                           max_length=self.max_num_tokens, 
+                                           training=False, 
+                                           drop_rate=self.drop_rate)
                     
-        if self.training:
-            return tokens, masks
-        return tokens, masks, index
+        return tokens, masks
 
     def logging(self, logger):
         super().logging(logger)
@@ -92,38 +68,33 @@ class TextDataset(BaseDataset):
         logger.info('drop rate: {}'.format(self.drop_rate))
 
 
-class VTDatasetForDML(BaseDataset):
-    def __init__(self, dataset_conf, video_conf, text_conf, training):
-        super().__init__(dataset_conf['data_file'])
-        self.labels = self.label_to_video_list()
-        
-        self.training = training
+class VTDatasetLabel(VideoDatasetBase, TextDatasetBase):
+    def __init__(self, dataset_conf, video_conf, text_conf):
+        super().__init__(dataset_conf['data_file'], 
+                         max_num_frames=video_conf['max_length'], 
+                         tokenizer_id=text_conf['model_id'],
+                         max_num_tokens=text_conf['max_length'],
+                         drop_rate=dataset_conf['text_drop_rate'])
+
+        self.label_meta, self.labels = self.label_to_video_list()
         self.nsamples = dataset_conf['nsamples']
-        self.videoset = VideoDataset(dataset_conf['data_file'],
-                                     video_conf['max_length'],
-                                     training)
-        self.textset = TextDataset(dataset_conf['data_file'],
-                                   text_conf['model_id'],
-                                   text_conf['max_length'],
-                                   training,
-                                   dataset_conf['text_drop_rate'])
 
     def label_to_video_list(self):
-        self.label_meta = {}
+        label_meta = {}
         for k in self.meta.keys():
             for label in self.meta[k]['label']:
-                if label not in self.label_meta.keys():
-                    self.label_meta[label] = []
-                self.label_meta[label].append(k)
+                if label not in label_meta.keys():
+                    label_meta[label] = []
+                label_meta[label].append(k)
 
         one_label = []
-        for label in self.label_meta.keys():
-            if len(self.label_meta[label]) <= 1:
+        for label in label_meta.keys():
+            if len(label_meta[label]) <= 1:
                 one_label.append(label)
         for label in one_label:
-            del self.label_meta[label]
+            del label_meta[label]
 
-        return list(self.label_meta.keys())
+        return label_meta, list(label_meta.keys())
 
     def __len__(self):
         return len(self.labels)
@@ -131,25 +102,24 @@ class VTDatasetForDML(BaseDataset):
     def __getitem__(self, index):  
         label = self.labels[index]
         
-        if self.training:
-            videoids = random.sample(self.label_meta[label], self.nsamples)
+        videoids = random.sample(self.label_meta[label], self.nsamples)
 
-            videos, vmasks, texts, tmasks, labels = [], [], [], [], []
-            for videoid in videoids:
-                video, vmask = self.videoset[videoid]
-                text, tmask = self.textset[videoid]
-                videos.append(video)
-                vmasks.append(vmask)
-                texts.append(text)
-                tmasks.append(tmask)
-                labels.append(label)
-            return torch.cat(videos, dim=0), torch.cat(vmasks, dim=0), torch.cat(texts, dim=0), torch.cat(tmasks, dim=0), torch.tensor(labels)
-        else:
-            videos, vmasks, _ = self.videoset[index]
-            texts, tmasks, _ = self.textset[index]
-            return videos, vmasks, texts, tmasks, index
-
+        videos, vmasks, texts, tmasks, labels = [], [], [], [], []
+        for videoid in videoids:
+            video, vmask = VideoDatasetBase.__getitem__(self, videoid)
+            text, tmask = TextDatasetBase.__getitem__(self, videoid)
+            videos.append(video)
+            vmasks.append(vmask)
+            texts.append(text)
+            tmasks.append(tmask)
+            labels.append(label)
+        
+        return (torch.cat(videos, dim=0), 
+                torch.cat(vmasks, dim=0), 
+                torch.cat(texts, dim=0), 
+                torch.cat(tmasks, dim=0), 
+                torch.tensor(labels))
+        
     def logging(self, logger):
         super().logging(logger)
-        self.videoset.logging(logger)
-        self.textset.logging(logger)
+        logger.info('VTDatasetLabel nsamples: {}'.format(self.nsamples))
