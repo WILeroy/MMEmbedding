@@ -13,6 +13,7 @@ import dataloader.collate as collate
 import utils.utils as utils
 from dataloader.dataset_emb import VTDatasetEmbedding
 from model import MLPFusion, TextExpert, VideoExpert
+from dataloader.partition import MetaPartitioner
 
 
 def run(rank, config, partitioner):
@@ -26,10 +27,7 @@ def run(rank, config, partitioner):
     # Get splited dataset.
     partition = partitioner.use(rank)
 
-    dataset = VTDatasetEmbedding(partition, 
-                        config['experts']['stam']['max_length'], 
-                        config['experts']['sbert']['model_id'], 
-                        config['experts']['sbert']['max_length'])
+    dataset = VTDatasetEmbedding(partition, config['experts']['stam'], config['experts']['sbert'])
     dataset.logging(logger)
     dataloader = DataLoader(dataset,
                             batch_size=config['train']['size_per_gpu']*3,
@@ -111,32 +109,6 @@ def parse_config(args):
     os.makedirs(args.out_dir, exist_ok=True)
 
     return config
-        
-
-class DataPartitioner(object):
-    """Partitions a dataset into different chuncks."""
-
-    def __init__(self, data_file, sizes):
-        self.meta, self.indexes = self.parse_metafile(data_file)
-        self.partitions = []
-
-        data_len = len(self.indexes)
-
-        for part_to_rank, frac in enumerate(sizes):
-            if part_to_rank == (len(sizes) - 1):
-                self.partitions.append(self.indexes)
-                continue
-            part_len = int(frac * data_len)
-            self.partitions.append(self.indexes[0:part_len])
-            self.indexes = self.indexes[part_len:]
-
-    def parse_metafile(self, metafile):
-        with open(metafile) as f:
-            meta = json.load(f)
-        return meta, list(meta.keys())
-
-    def use(self, partition):
-        return {index:self.meta[index] for index in self.partitions[partition]}
 
 
 if __name__ == '__main__':
@@ -157,7 +129,7 @@ if __name__ == '__main__':
     # Split dataset to different devices.
     config['ngpus'] = torch.cuda.device_count()
     size_gpus = [config['train']['size_per_gpu']*3 for _ in range(config['ngpus'])]
-    partitioner = DataPartitioner(args.data_file, np.array(size_gpus)/np.sum(size_gpus))
+    partitioner = MetaPartitioner(args.data_file, np.array(size_gpus)/np.sum(size_gpus))
 
     # Running.
     torch.multiprocessing.set_start_method('spawn')
