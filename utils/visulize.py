@@ -34,9 +34,9 @@ red_image_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
 
 video_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
     <table>\
-		<tr><td width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
+		<tr><td height=\"20\" width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
 		<tr><td><video height=\"220\" width=\"220\" controls="" name="media"><source src="{}" type="video/mp4"></video></td></tr>\
-        <tr><td width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
+        <tr><td height=\"80\" width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
 	</table></td>\n'
 
 red_video_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
@@ -54,8 +54,9 @@ def draw_block(body, head, w):
     num_line = int(len(body))
     content = ''
 
-    head_flag = True
-    head_template = spanrow_video_template if head['type'] == 'video' else spanrow_image_template
+    head_flag = True if head is not None else False
+    if head is not None:
+        head_template = spanrow_video_template if head['type'] == 'video' else spanrow_image_template
     
     for line in body:
         content += "<tr>\n"
@@ -117,6 +118,28 @@ def draw_video_to_videos(qid, qurl, qtext, gids, scores, gurls, gtexts, gspecial
                   'type':'video'} for gid, s, gurl, gtext, gspecial in zip(gids, scores, gurls, gtexts, gspecials)]
 
     draw_data['head'] = head_data
+    draw_data['body'] = body_data
+
+    return draw_data
+
+
+def draw_videos_tag(vids, urls, texts, tags, scores):
+    draw_data = {}
+
+    body_data = []
+    for vid, url, text, tag, score in zip(vids, urls, texts, tags, scores):
+        vistext = []
+        for t, s in zip(tag, score):
+            vistext.append('{}: {:.6f}'.format(t, s))
+        body_data.append(
+            {'title': vid,
+             'url': url, 
+             'text': '</br>'.join(vistext),
+             'red': False,
+             'type':'video'}
+        )
+
+    draw_data['head'] = None
     draw_data['body'] = body_data
 
     return draw_data

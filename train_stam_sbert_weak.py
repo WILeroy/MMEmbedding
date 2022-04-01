@@ -131,7 +131,7 @@ def run(rank, config, trainset):
 
             optimizer.zero_grad()
 
-            indices_tuple = miner_func(embeddings, labels,)
+            indices_tuple = miner_func(embeddings, labels)
             loss = loss_func(embeddings, labels, indices_tuple)
             loss.backward()
 
