@@ -18,6 +18,8 @@ spanrow_video_template = '\t<td rowspan=\"{}\" width=\"220\" align=\"center\" va
         <tr><td width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
     </table></td>\n'
 
+spanrow_text_template = '\t<td rowspan=\"{}\" width=\"220\" align=\"center\" valign=\"middle\">{}</td>\n'
+
 image_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
     <table>\
 		<tr><td width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
@@ -34,9 +36,9 @@ red_image_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
 
 video_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
     <table>\
-		<tr><td height=\"20\" width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
+		<tr><td height=\"40\" width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
 		<tr><td><video height=\"220\" width=\"220\" controls="" name="media"><source src="{}" type="video/mp4"></video></td></tr>\
-        <tr><td height=\"80\" width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
+        <tr><td height=\"140\" width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
 	</table></td>\n'
 
 red_video_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
@@ -45,6 +47,7 @@ red_video_template = '\t<td width=\"220\" align=\"center\" valign=\"middle\">\
 		<tr><td><video height=\"220\" width=\"220\" controls="" name="media"><source src="{}" type="video/mp4"></video></td></tr>\
         <tr><td width=\"220\" align=\"center\" valign=\"middle\" style=\"word-break:break-all\">{}</td></tr>\
 	</table></td>\n'
+
 
 empty_content = '<tr>\n\t<td style=\"border-left-style:hidden;border-right-style:hidden;\" \
     height=\"40\" width=\"220\" align=\"center\" valign=\"middle\"></td>\n</tr>\n'
@@ -56,7 +59,12 @@ def draw_block(body, head, w):
 
     head_flag = True if head is not None else False
     if head is not None:
-        head_template = spanrow_video_template if head['type'] == 'video' else spanrow_image_template
+        if head['type'] == 'video':
+            head_template = spanrow_video_template
+        elif head['type'] == 'text':
+            head_template = spanrow_text_template
+        elif head['type'] == 'image':
+            head_template = spanrow_image_template
     
     for line in body:
         content += "<tr>\n"
@@ -68,8 +76,12 @@ def draw_block(body, head, w):
                 body_template = video_template if item['type'] == 'video' else image_template
 
             if head_flag:
-                content += head_template.format(
-                    num_line, head['title'], head['url'], head['text'])
+                if head['type'] == 'video' or head['type'] == 'image':
+                    content += head_template.format(
+                        num_line, head['title'], head['url'], head['text'])
+                elif head['type'] == 'text':
+                    content += head_template.format(
+                        num_line, head['text'])
                 head_flag = False
             
             content += body_template.format(item['title'], item['url'], item['text'])
@@ -123,6 +135,26 @@ def draw_video_to_videos(qid, qurl, qtext, gids, scores, gurls, gtexts, gspecial
     return draw_data
 
 
+def draw_text_to_videos(qtext, gids, gurls, gtexts, gauthors, gspecials):
+    draw_data = {}
+    
+    head_data = {
+        'text': qtext,
+        'type': 'text'
+    }
+
+    body_data = [{'title': '{}</br>{}'.format(gid, gauthor),
+                  'url': gurl, 
+                  'text': gtext,
+                  'red': gspecial,
+                  'type':'video'} for gid, gurl, gtext, gauthor, gspecial in zip(gids, gurls, gtexts, gauthors, gspecials)]
+
+    draw_data['head'] = head_data
+    draw_data['body'] = body_data
+
+    return draw_data
+
+
 def draw_videos_tag(vids, urls, texts, tags, scores):
     draw_data = {}
 
@@ -140,6 +172,35 @@ def draw_videos_tag(vids, urls, texts, tags, scores):
         )
 
     draw_data['head'] = None
+    draw_data['body'] = body_data
+
+    return draw_data
+
+
+def draw_image_to_videotags(qtag, qtagimage, vids, urls, texts, tags, scores):
+    draw_data = {}
+
+    head_data = {
+        'title': qtag,
+        'url': qtagimage,
+        'text': '',
+        'type': 'image'
+    }
+
+    body_data = []
+    for vid, url, text, tag, score in zip(vids, urls, texts, tags, scores):
+        vistext = []
+        for t, s in zip(tag, score):
+            vistext.append('{}: {:.6f}'.format(t, s))
+        body_data.append(
+            {'title': vid,
+             'url': url, 
+             'text': '</br>'.join(vistext),
+             'red': False,
+             'type':'video'}
+        )
+
+    draw_data['head'] = head_data
     draw_data['body'] = body_data
 
     return draw_data

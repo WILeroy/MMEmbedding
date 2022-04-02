@@ -1,40 +1,16 @@
-import requests
 import os
 import time
 from multiprocessing import Pool
-import pandas as pd
+
+import requests
 import tqdm
 
+from build_allset import load_allset
 
-videoid2url = {}
-videoid2cap = {}
 
-def load_csv(csv_path):
-    df = pd.read_csv(csv_path)
+videoid2url, _, _ = load_allset()
 
-    print(df.columns.tolist())
-
-    videoids = df['video_id'].values.tolist()
-    urls = df['video_url'].values.tolist()
-    captions = df['video_caption'].values.tolist()
-
-    print(len(videoids))
-    print(len(urls))
-    
-    for video_id, url, caption in zip(videoids, urls, captions):
-        video_id = str(video_id)
-        videoid2url[video_id] = url
-        videoid2cap[video_id] = caption
-
-""" 需要修改两个全量索引文件路径.
-"""
-load_csv('../../data/shopee-video/meta/shopee_video_20220224_video_caption_quanliang.csv')
-load_csv('../../data/shopee-video/meta/shopee_video_20220216_video_caption.csv')
-
-print(len(list(videoid2url.keys())))
-
-""" 需要修改两个全量索引文件路径.
-"""
+""" 存储数据的路径. """
 log_dir = '../../data/shopee-video/prelogs/'
 frame_dir = '../../data/shopee-video/frames/'
 audio_dir = '../../data/shopee-video/audios/'
@@ -42,7 +18,7 @@ tmp_dir = '../../data/shopee-video/tmp'
 
 
 def download_video(idx, vid, url, log_save_to):
-    """if os.path.exists(log_save_to):
+    if os.path.exists(log_save_to):
         with open(log_save_to) as f:
             log_concent = f.read()
             if log_concent == 'download_wrong':
@@ -52,12 +28,14 @@ def download_video(idx, vid, url, log_save_to):
             elif log_concent == 'frame_wrong_audio_done':
                 print('only bad frame', vid, videoid2url[vid])
             elif log_concent in ['frame_done_audio_wrong', 'frame_done_audio_done']:
+                """ resume. """
                 return
             else:
                 print('can\'t check', log_concent)
+        print(vid, 'try again')                
     else:
         print('no log', vid, videoid2url[vid])
-    print(vid, 'again')"""
+        print(vid, 'try again')
 
     results = ''
 

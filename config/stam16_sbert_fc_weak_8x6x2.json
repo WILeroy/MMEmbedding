@@ -23,7 +23,7 @@
         "dim": 512
     },
     "trainset": {
-        "data_file": "../../data/shopee-video/meta/weak_trainset.json",
+        "data_file": "data/weak_trainset.json",
         "nsamples": 2,
         "text_drop_rate": 0.1
     },
