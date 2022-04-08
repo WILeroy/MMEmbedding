@@ -44,7 +44,7 @@ python train_stam_sbert_weak.py config/*.json
 
 ## Extract
 ```
-python emb_stam_sbert_fc.py logs/*/model_*.pth logs/*/*.json data/testset400.json [dir_to_save_embeddings]
+python emb_stam_sbert_fc.py logs/*/*.json logs/*/model_*.pth data/testset400.json [dir_to_save_embeddings]
 ```
 
 ## Retrieval
