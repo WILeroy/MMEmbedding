@@ -1,5 +1,0 @@
-seedset_90.tsv https://drive.google.com/file/d/1dIRw828m5T-mKljORLpWU7j6AlKl489o/view?usp=sharing
-testset_400.tsv https://drive.google.com/file/d/1-0fuSt-a4dlEglrlkQ3gd5eOfA0V6oNi/view?usp=sharing
-shopee_video_20220216_video_caption.csv https://drive.google.com/file/d/1Cc6Yu322MSiXU4oddiofsDLy9r9X7ERr/view?usp=sharing
-shopee_video_20220224_video_caption_quanliang.csv https://drive.google.com/file/d/1L6n8CF0sEaWgoLIk-VYWXYgA1riznF6d/view?usp=sharing
-video_list_with_weak_pos.txt https://drive.google.com/file/d/1JqTm5gThVyDyMsUPvTjWu2X6ZLupsZl1/view?usp=sharing
