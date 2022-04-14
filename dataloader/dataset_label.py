@@ -10,9 +10,9 @@ from .dataset_base import VideoBaseDataset, TextBaseDataset
 class VTDatasetLabel(Dataset):
     def __init__(self, dataset_conf, video_conf, text_conf):
         super().__init__()
+        self.nsamples = dataset_conf['nsamples']
         self.labels, self.label_meta = self.parse_meta(dataset_conf['data_file'])
         
-        self.nsamples = dataset_conf['nsamples']
         self.videoset = VideoBaseDataset(
             meta = dataset_conf['data_file'],
             max_num_frames = video_conf['max_length'],
@@ -43,7 +43,7 @@ class VTDatasetLabel(Dataset):
 
         one_label = []
         for label in label_meta.keys():
-            if len(label_meta[label]) <= 1:
+            if len(label_meta[label]) < self.nsamples:
                 one_label.append(label)
         for label in one_label:
             del label_meta[label]
