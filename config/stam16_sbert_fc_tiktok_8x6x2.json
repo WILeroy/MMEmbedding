@@ -1,0 +1,37 @@
+{
+    "expname": "stam16_sbert_fc_tiktok_8x6x2",
+    "logdir": "logs",
+    "experts": {
+        "stam": {
+            "max_length": 16,
+            "input_frame_size": 224,
+            "pretrain": true,
+            "pretrain_parms": "pretrain/stam_16.pth",
+            "dim": 768,
+            "frz": false
+        },
+        "sbert": {
+            "max_length": 128,
+            "pretrain": true,
+            "model_id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            "dim": 384,
+            "frz": false
+        }
+    },
+    "fusion": {
+        "name": "fc",
+        "dim": 512
+    },
+    "trainset": {
+        "data_file": "data/tiktok_trainset_clean.json",
+        "nsamples": 2,
+        "text_drop_rate": 0.1
+    },
+    "train": {
+        "size_per_gpu": 6,
+        "epochs": 30,
+        "lr_init": 3e-5,
+        "warm_up_epochs": 3,
+        "save_interval": 1
+    }
+}

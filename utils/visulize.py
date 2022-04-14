@@ -135,7 +135,7 @@ def draw_video_to_videos(qid, qurl, qtext, gids, scores, gurls, gtexts, gspecial
     return draw_data
 
 
-def draw_text_to_videos(qtext, gids, gurls, gtexts, gauthors, gspecials):
+def draw_text_to_videos(qtext, gids, gurls, gtexts, gauthors, gscores, gspecials):
     draw_data = {}
     
     head_data = {
@@ -143,11 +143,11 @@ def draw_text_to_videos(qtext, gids, gurls, gtexts, gauthors, gspecials):
         'type': 'text'
     }
 
-    body_data = [{'title': '{}</br>{}'.format(gid, gauthor),
+    body_data = [{'title': '{}</br>{}</br>{:.5f}'.format(gid, gauthor, gscore),
                   'url': gurl, 
                   'text': gtext,
                   'red': gspecial,
-                  'type':'video'} for gid, gurl, gtext, gauthor, gspecial in zip(gids, gurls, gtexts, gauthors, gspecials)]
+                  'type':'video'} for gid, gurl, gtext, gauthor, gscore, gspecial in zip(gids, gurls, gtexts, gauthors, gscores, gspecials)]
 
     draw_data['head'] = head_data
     draw_data['body'] = body_data

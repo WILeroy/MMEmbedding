@@ -42,8 +42,3 @@ class VTDatasetEmbedding(Dataset):
         assert vindex == tindex
 
         return videos, vmasks, tokens, tmasks, vindex
-    
-    def logging(self, logger):
-        logger.info('VTDatasetEmbedding size: {}'.format(self.__len__()))
-        self.videoset.logging(logger)
-        self.textset.logging(logger)

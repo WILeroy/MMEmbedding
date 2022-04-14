@@ -15,6 +15,17 @@ from dataloader.dataset_emb import VTDatasetEmbedding
 from model import MLPFusion, TextExpert, VideoExpert
 from dataloader.partition import MetaPartitioner
 
+import torch.nn as nn
+import torch.nn.functional as F
+class ReduceDim(nn.Module):
+  def __init__(self, input_dim, output_dim):
+    super(ReduceDim, self).__init__()
+    self.fc = nn.Linear(input_dim, output_dim)
+
+  def forward(self, x):
+    x = self.fc(x)
+    x = F.normalize(x, dim=-1)
+    return x
 
 def run(rank, config, partitioner):
     logger = utils.define_logger(config['logdir'], 'emb.log')
@@ -45,24 +56,24 @@ def run(rank, config, partitioner):
     logger.info('rank {}, model\'s epoch: {}'.format(rank, model_data['epoch']))
 
     config['experts']['stam']['pretrain'] = False
-    stam = VideoExpert(config['experts']['stam'])
+    stam = VideoExpert(config['experts']['stam'], reducer=ReduceDim(768, 512))
     stam.load_state_dict(model_data['stam'])
     stam.to(device)
     
-    sbert = TextExpert(config['experts']['sbert'])
-    sbert.load_state_dict(model_data['sbert'])
-    sbert.to(device)
+    #sbert = TextExpert(config['experts']['sbert'])
+    #sbert.load_state_dict(model_data['sbert'])
+    #sbert.to(device)
     
-    if config['fusion']['name'] == 'fc':
-        fusion = MLPFusion(
-            config['experts']['stam']['dim']+config['experts']['sbert']['dim'], 
-            config['fusion']['dim'])
-    fusion.load_state_dict(model_data['fusion'])
-    fusion.to(device)
+    #if config['fusion']['name'] == 'fc':
+    #    fusion = MLPFusion(
+    #        config['experts']['stam']['dim']+config['experts']['sbert']['dim'], 
+    #        config['fusion']['dim'])
+    #fusion.load_state_dict(model_data['fusion'])
+    #fusion.to(device)
 
     stam.eval()
-    sbert.eval()
-    fusion.eval()
+    #sbert.eval()
+    #fusion.eval()
 
     cnt = 0
     t = time.time()
@@ -71,15 +82,15 @@ def run(rank, config, partitioner):
         vdata, vmask, tdata, tmask, vids = batch
         vdata = vdata.to(device)
         vmask = vmask.to(device)
-        tdata = tdata.to(device)
-        tmask = tmask.to(device)
+        #tdata = tdata.to(device)
+        #tmask = tmask.to(device)
 
         try:
             with torch.no_grad():
                 vembeddings = stam(vdata, vmask)['pooled_feature']
-                tembeddings = sbert(tdata, tmask)['pooled_feature']
-                embeddings = fusion(torch.cat([vembeddings, tembeddings], dim=1))
-                embeddings = embeddings.detach().cpu().numpy()
+                #tembeddings = sbert(tdata, tmask)['pooled_feature']
+                #embeddings = fusion(torch.cat([vembeddings, tembeddings], dim=1))
+                embeddings = vembeddings.detach().cpu().numpy()
         except:
             print(vdata.size())
             print(vmask.size())

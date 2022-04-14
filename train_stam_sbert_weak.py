@@ -43,7 +43,7 @@ def run(rank, config, trainset):
     
     # Get splited dataset.
     partition = trainset.use(rank)
-    partition.logging(logger)
+    logger.info('rank {}, partition size: {}'.format(rank, len(partition)))
 
     dataloader = DataLoader(partition,
                             batch_size=config['train']['size_per_gpu'], 
@@ -197,7 +197,7 @@ if __name__ == '__main__':
     logger = utils.define_logger(config['logdir'], 'train.log')
 
     trainset = VTDatasetLabel(config['trainset'], config['experts']['stam'], config['experts']['sbert'])
-    trainset.logging(logger)
+    logger.info('trainset size: {}'.format(len(trainset)))
     
     # Split dataset.
     config['ngpus'] = torch.cuda.device_count()

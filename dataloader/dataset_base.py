@@ -24,9 +24,6 @@ class BaseDataset(Dataset):
     def __len__(self):
         return len(self.indexes)
 
-    def logging(self, logger):
-        logger.info('BaseDataset size: {}'.format(self.__len__()))
-
 
 class VideoBaseDataset(BaseDataset):
     """Based Dataset to load frames and mask."""
@@ -54,11 +51,6 @@ class VideoBaseDataset(BaseDataset):
         
         ret = (videos, masks) if self.training else (videos, masks, index)
         return ret
-
-    def logging(self, logger):
-        super().logging(logger)
-        logger.info('VideoBaseDataset max_num_frames: {}'.format(self.max_num_frames))
-        logger.info('VideoBaseDataset training: {}'.format(self.training))
 
 
 class TextBaseDataset(BaseDataset):
@@ -91,11 +83,4 @@ class TextBaseDataset(BaseDataset):
                     
         ret = (tokens, masks) if self.training else (tokens, masks, index)
         return ret
-
-    def logging(self, logger):
-        super().logging(logger)
-        logger.info('TextBaseDataset tokenizer_id: {}'.format(self.tokenizer_id))
-        logger.info('TextBaseDataset max_num_tokens: {}'.format(self.max_num_tokens))
-        logger.info('TextBaseDataset training: {}'.format(self.training))
-        logger.info('TextBaseDataset drop_rate: {}'.format(self.drop_rate))
-        logger.info('TextBaseDataset transform_cnt: {}'.format(self.transform_cnt))
+        

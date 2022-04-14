@@ -69,8 +69,3 @@ class VTDatasetLabel(Dataset):
                 
         return torch.cat(videos, dim=0), torch.cat(vmasks, dim=0), torch.cat(texts, dim=0), torch.cat(tmasks, dim=0), torch.tensor(labels)
         
-
-    def logging(self, logger):
-        logger.info('VTDatasetLabel size: {}'.format(self.__len__()))
-        self.videoset.logging(logger)
-        self.textset.logging(logger)

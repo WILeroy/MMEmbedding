@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import os.path as osp
 from multiprocessing import Pool
 
@@ -10,6 +11,7 @@ import utils.visulize as visulize
 from utils.gallery import Gallery
 from tools.build_allset import load_allset
 
+videoid2url, _, _ = load_allset()
 
 def run_top10(query_feat):
     global gallery
@@ -25,18 +27,9 @@ def run_top10(query_feat):
 #################### global gallery ####################
 gallery = Gallery()
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('emb_dir')
-    parser.add_argument('target_data')
-    parser.add_argument('--save-gallery', type=str, default=None)
-    parser.add_argument('--reload', type=str, default=None)
-    parser.add_argument('--save-result', type=str, default='shopee-video_results.html')
-    args = parser.parse_args()
 
-    videoid2url, _, _ = load_allset()
-
-    with open(args.target_data) as f:
+def main(emb_dir, target_data):
+    with open(target_data) as f:
         dataset = json.load(f)
 
     latestlabel = "-1"
@@ -51,19 +44,13 @@ if __name__ == '__main__':
     print('query num:', len(qids))
     print('gallery size:', len(gids))
 
-    if args.reload is not None:
-        gallery.reload(args.reload, True)
-    else:
-        gallery.load_features(args.emb_dir, gids, True)
-
-    if args.save_gallery is not None:
-        gallery.save(args.save_gallery)
+    gallery.load_features(emb_dir, gids, True)
 
     pool = Pool(96)
 
     reqs = []
     for idx, qid in enumerate(qids):
-        qemb = gallery._load_feat(osp.join(args.emb_dir, qid+'.npy'))
+        qemb = gallery._load_feat(osp.join(emb_dir, qid+'.npy'))
         reqs.append((idx, qid, pool.apply_async(run_top10, args=(qemb, ))))
 
     draw_data = []
@@ -95,7 +82,17 @@ if __name__ == '__main__':
             recall_ids, cosines, recall_urls, recall_captions, recall_rights)
 
         draw_data.append(block_data)
-    visulize.draw_page(args.save_result, draw_data, 5)
 
-    print('right num:', cnt)
-    print('recall:', recall / 399)
+    return cnt, recall / 399
+
+
+if __name__ == '__main__':
+    expname = 'stam16_sbert_fc_weak_8x6x2'
+    for i in range(2, 17):
+        cmd = f'python emb_stam_sbert_fc.py logs/{expname}/{expname}.json \
+                logs/{expname}/model_{i}.pth data/testset400.json \
+                ../../data/shopee-video/embeddings/{expname}/epoch_{i}'
+        os.system(cmd)
+
+        cnt, recall = main(f'../../data/shopee-video/embeddings/{expname}/epoch_{i}', 'data/testset400.json')
+        print(f'epoch {i}:', cnt, recall)
